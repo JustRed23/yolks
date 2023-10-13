@@ -17,17 +17,25 @@ RUN         apt update -y \
 					fontconfig \
 					tzdata \
 					iproute2 \
-					libfreetype6
-					
-RUN         curl https://packages.microsoft.com/keys/microsoft.asc | tee /etc/apt/trusted.gpg.d/microsoft.asc
-RUN			curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list > /etc/apt/sources.list.d/mssql-release.list
-RUN			echo msodbcsql msodbcsql/ACCEPT_EULA select true | debconf-set-selections
-RUN			echo mssql-tools mssql-tools/accept_eula select Y | debconf-set-selections
+					libfreetype6 \
+					apt-transport-https \
+					debconf-utils \
+					gnupg2 
 
-RUN         apt update -y \
-			&& apt install -y \
-					mssql-tools18 \
-					unixodbc-dev
+# adding custom MS repository
+RUN 		curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
+RUN 		curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list > /etc/apt/sources.list.d/mssql-release.list
+
+# install SQL Server drivers and tools
+RUN 		apt-get update && ACCEPT_EULA=Y apt-get install -y msodbcsql18 mssql-tools18
+RUN 		echo 'export PATH="$PATH:/opt/mssql-tools18/bin"' >> ~/.bashrc
+RUN 		/bin/bash -c "source ~/.bashrc"
+
+RUN 		apt-get -y install locales \
+			&& rm -rf /var/lib/apt/lists/*
+			
+RUN 		locale-gen en_US.UTF-8
+RUN 		update-locale LANG=en_US.UTF-8
 
 ## Setup user and working directory
 RUN         useradd -m -d /home/container -s /bin/bash container
